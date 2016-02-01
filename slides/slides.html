@@ -1,67 +1,60 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="author" content="Ondra Chaloupka / ochaloup@redhat.com"><title>Byteman in JBoss EAP QE</title><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" name="viewport"><link href="reveal.js/css/reveal.css" rel="stylesheet"><link rel="stylesheet" href="reveal.js/css/theme/redhat.css" id="theme"><link href="reveal.js/lib/css/zenburn.css" rel="stylesheet"><script type="text/javascript">document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );</script></head><body><div class="reveal"><div class="slides"><section><h1>Byteman in JBoss EAP QE</h1><aside class="notes"><div class="paragraph"><p>What to talk about:</p></div>
-<div class="ulist"><ul><li><p>demo where starting jboss with some initial btm configuration (e.g. after each doGet
-of a servlet some info could be printed) then connection to  running jvm process and
-add some rule (e.g. change servlet response text) and then delete rule</p></li></ul></div></aside><p><small>Ondra Chaloupka / ochaloup@redhat.com</small></p></section>
-<section id="_what_the_heck"><h2>What the heck?</h2><div class="paragraph"><p><span class="image"><img src="./images/misc/wtf2.jpg" alt="wtf2"></span></p></div>
-<aside class="notes"><div class="paragraph"><p>This talk should introduce you to world of Byteman java bytecode manipulation library.
-It&#8217;s mostly introductory talk but it tries to cover most of the functions of
-the library.
-What can help you with?</p></div>
-<div class="ulist"><ul><li><p>Inject crashes to you test code</p></li><li><p>Returns specific return value needed for your testing</p></li><li><p>Throwing specific exception and some point of code</p></li><li><p>Debugging of code behavior (e.g. getting stacktraces at some method call etc.)</p></li></ul></div>
-<div class="paragraph"><p>What should you learnt?
- * what is Byteman good for
- * you should be able to use it in your project at the end of this talk
-   (or at least understand how to use it)</p></div>
-<div class="admonitionblock caution"><table><tr><td class="icon"><div class="title">Caution</div></td><td class="content">show crashrec testsuite usage here</td></tr></table></div></aside></section>
-<section id="_agenda"><h2>Agenda</h2><div class="ulist"><ul><li><p>Byteman usage introduction</p></li><li><p>Byteman rules language</p></li><li><p>Byteman helper classes</p></li><li><p>BMUnit library</p></li><li><p>DTest library</p></li><li><p>Running with JBoss EAP/WildFly</p></li></ul></div></section>
-<section id="_what_is_byteman"><h2>What is byteman</h2><div class="ulist"><ul><li><p>Java bytecode manipulation library</p></li><li><p>Based on rules - a simple scripting language</p></li></ul></div>
-<aside class="notes"><div class="ulist"><ul><li><p>Byteman allows you to insert extra Java code into your application,
-either as it is loaded during JVM startup or even after it has already started running.</p></li><li><p>Byteman works by modifying the bytecode of your application classes at runtime.
-Since it only needs access to bytecode this means it can modify library code
-whose source is either unavailable or unable to be recompiled.</p></li><li><p>Byteman uses a simple scripting language</p><div class="ulist"><ul><li><p>Byteman rules hook up some code execution of you app and triggers some special
-actions defined by byteman rule or with additional java helper class</p></li></ul></div></li></ul></div></aside></section>
-<section id="_traps"><h2>Traps</h2><div class="ulist"><ul><li><p>Use unique rule names</p></li></ul></div>
-<aside class="notes"><div class="ulist"><ul><li><p>Unique rule name
-if unique name is not specfied then byteman will possibly crash JVM. For example
-by using byteman rule of printing info on jboss start up and rules have the same name</p></li></ul></div>
-<div class="listingblock"><div class="content"><pre class="highlight"><code>RULE say I am here
-CLASS org.jboss.modules.Main
-METHOD main
-AT ENTRY
-IF TRUE
-DO System.out.println("Byteman is here");
-ENDRULE
-
-RULE say I am here
-CLASS org.jboss.modules.Main
-METHOD main
-AT ENTRY
-IF TRUE
-DO System.out.println("Byteman is here2");
-ENDRULE</code></pre></div></div>
-<div class="paragraph"><p>will cause startup exception</p></div>
-<div class="listingblock"><div class="content"><pre class="highlight"><code>Exception in thread "main" java.lang.reflect.InvocationTargetException
- at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
- at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
- at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
- at java.lang.reflect.Method.invoke(Method.java:497)
- at sun.instrument.InstrumentationImpl.loadClassAndStartAgent(InstrumentationImpl.java:386)
- at sun.instrument.InstrumentationImpl.loadClassAndCallPremain(InstrumentationImpl.java:401)
-Caused by: java.lang.reflect.InvocationTargetException
- at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
- at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
- at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
- at java.lang.reflect.Constructor.newInstance(Constructor.java:422)
- at org.jboss.byteman.agent.Main.premain(Main.java:272)
- ... 6 more
-Caused by: java.lang.Exception: Transformer : duplicate script name say I am here in file /home/ochaloup/tmp/byteman.btm  line 24
- previously defined in file /home/ochaloup/tmp/byteman.btm  line 15
- at org.jboss.byteman.agent.Transformer.&lt;init&gt;(Transformer.java:95)
- ... 11 more
-FATAL ERROR in native method: processing of -javaagent failed
-./bin/standalone.sh: line 301: 30598 Aborted</code></pre></div></div></aside></section>
-<section id="_other_bytecode_generation_tools"><h2>Other bytecode generation tools</h2><div class="ulist"><ul><li><p>Byte Buddy: <a href="http://bytebuddy.net" class="bare">http://bytebuddy.net</a></p></li><li><p>cglib: <a href="https://github.com/cglib/cglib" class="bare">https://github.com/cglib/cglib</a></p></li><li><p>Javassist: <a href="http://jboss-javassist.github.io/javassist" class="bare">http://jboss-javassist.github.io/javassist</a></p></li></ul></div></section>
-<section id="_references"><h2>References</h2><div class="ulist"><ul><li><p>Byteman programmer&#8217;s guide: <a href="http://byteman.jboss.org/documentation" class="bare">http://byteman.jboss.org/documentation</a></p></li><li><p>something</p></li><li><p>something else</p></li><li><p>Bookmarks at <a href="https://delicious.com/chalda/btm.presentation" class="bare">https://delicious.com/chalda/btm.presentation</a></p></li></ul></div></section>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="author" content="Ondra Chaloupka / ochaloup@redhat.com"><title>XA transactions in JBoss EAP</title><meta content="yes" name="apple-mobile-web-app-capable"><meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" name="viewport"><link href="reveal.js/css/reveal.css" rel="stylesheet"><link rel="stylesheet" href="reveal.js/css/theme/redhat.css" id="theme"><link href="reveal.js/lib/css/zenburn.css" rel="stylesheet"><script type="text/javascript">document.write( '<link rel="stylesheet" href="reveal.js/css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );</script></head><body><div class="reveal"><div class="slides"><section><h1>XA transactions in JBoss EAP</h1><aside class="notes"><div class="literalblock"><div class="content"><pre>What to check
+* 2PC
+* 3PC
+* Periodic  recovery
+* 2PC optimalizations
+** presumed rollback optimalization
+** read-only optimalization
+** one-phase commit optimalization
+** LRCO vs. CMR
+* Narayana log store types (filesystem, hornetq, jdbc)
+* Operation with log store and jboss cli
+* JCA multiple datasources in XA
+JCA - Using tracking=true will make it scream... Assuming you are inside a transaction... WildFly doesn't make use of IronJacamar's tracking feature by default. Further details at http://www.ironjacamar.org/doc/roadto12/txtracking.html</pre></div></div></aside><p><small>Ondra Chaloupka / ochaloup@redhat.com</small></p></section>
+<section id="_motivation"><h2>Motivation</h2><div class="paragraph"><p><span class="image"><img src="./images/misc/wtf2.jpg" alt="wtf2"></span></p></div>
+<aside class="notes"><div class="paragraph"><p>I would like provide you a knowledge about XA transactions and their processing in Narayana.
+The aim of this talk is for you understanding how transaction manager processes a transaction
+and how it cope with a fail.</p></div></aside></section>
+<section id="_agenda"><h2>Agenda</h2><div class="ulist"><ul><li><p>Transaction basics</p></li><li><p>Transaction API of Java EE</p></li></ul></div></section>
+<section id="_basics"><h2>Basics</h2><div class="ulist"><ul><li><p>Transactions</p></li><li><p>Transactions models</p></li><li><p>ACID</p></li><li><p>Transaction manager</p></li><li><p>BMT vs. CMT</p></li></ul></div>
+<aside class="notes"><div class="paragraph"><p>Short summary from the previous sessions.
+<a href="https://github.com/ochaloup/ts-presentation/blob/master/slides/" class="bare">https://github.com/ochaloup/ts-presentation/blob/master/slides/</a></p></div></aside></section>
+<section id="_basics_cont"><h2>Basics (cont.)</h2><div class="ulist"><ul><li class="fragment"><p>ACID (Atomic, Consistent, Isolated, Durable)</p></li><li class="fragment"><p>Resource local vs. Global vs. Distributed</p></li><li class="fragment"><p>XA is (not) Distributed transaction</p></li><li class="fragment"><p>JTA is high level API, JTS is low level API</p></li><li class="fragment"><p>Transaction manager implements JTA and JTS</p></li></ul></div></section>
+<section id="_narayana"><h2>Narayana</h2><div class="paragraph"><p><span class="image"><img src="./images/logo/narayana-logo.png" alt="narayana logo"></span></p></div>
+<div class="ulist"><ul><li><p>Formerly Arjuna Transaction Manager</p></li><li><p>Rewritten code from C/C++</p></li><li><p><a href="http://narayana.io" class="bare">http://narayana.io</a></p></li></ul></div></section>
+<section><section id="_processes_of_narayana_in_jboss"><h2>Processes of Narayana in JBoss</h2><div class="ulist"><ul><li><p>Transaction management</p></li><li><p>Transaction reaper</p></li><li><p>Periodic recovery</p></li></ul></div><aside class="notes"><div class="paragraph"><p>Transaction management - start transaction, all what we talked in Java EE session
+Transaction reaper - background tread which checks timeout of transaction and could force transaction to abort
+Periodic recovery - runs in cycles (by default each 2 minutes) and cleaning not-finished transactions</p></div></aside></section><section id="_transaction_reaper_in_action"><h2>Transaction reaper in action</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="txt language-txt"> WARN  [com.arjuna.ats.arjuna] (Transaction Reaper) ARJUNA012117: TransactionReaper::check timeout for TX 0:ffffc0a8655e:-cccc977:55017a45:a281f in state  RUN
+ WARN  [com.arjuna.ats.arjuna] (Transaction Reaper Worker 0) ARJUNA012095: Abort of action id 0:ffffc0a8655e:-cccc977:55017a45:a281f invoked while multiple threads active within it.
+ WARN  [com.arjuna.ats.arjuna] (Transaction Reaper Worker 0) ARJUNA012108: CheckedAction::check - atomic action 0:ffffc0a8655e:-cccc977:55017a45:a281f aborting with 1 threads active!
+ WARN  [com.arjuna.ats.arjuna] (Transaction Reaper Worker 0) ARJUNA012121: TransactionReaper::doCancellations worker Thread[Transaction Reaper Worker 0,5,main] successfully canceled TX 0:ffffc0a8655e:-cccc977:55017a45:a281f</code></pre></div></div>
+<aside class="notes"><div class="paragraph"><p>Log from: <a href="https://issues.jboss.org/browse/AGPUSH-1320" class="bare">https://issues.jboss.org/browse/AGPUSH-1320</a>
+Problem of reaper running on background: <a href="https://developer.jboss.org/thread/243360" class="bare">https://developer.jboss.org/thread/243360</a>
+- some other TM does have configuration option to run reaper on foreground (not in background thread)</p></div></aside></section><section id="_periodic_recovery_in_action"><h2>Periodic Recovery in action</h2><div class="listingblock"><div class="content"><pre class="highlight"><code class="txt language-txt"> WARN  [com.arjuna.ats.jta] (Periodic Recovery) ARJUNA016037: Could not find new XAResource to use for recovering non-serializable XAResource XAResourceRecord &lt; resource:null, txid:&lt; formatId=131077, gtrid_length=39, bqual_length=36, tx_uid=0:ffff96854d53:-362d13b0:54047c43:10, node_name=rk3983node1, branch_uid=0:ffff96854d53:-362d13b0:54047c43:1b, subordinatenodename=null, eis_name=java:jboss/datasources/XATestNode11_Informix_DS &gt;, heuristic: TwoPhaseOutcome.FINISH_OK, product: Informix Dynamic Server/11.50.FC7, jndiName: java:jboss/datasources/XATestNode11_Informix_DS com.arjuna.ats.internal.jta.resources.arjunacore.XAResourceRecord@136e8bfd &gt;
+ WARN  [com.arjuna.ats.jta] (Periodic Recovery) ARJUNA016038: No XAResource to recover &lt; formatId=131077, gtrid_length=39, bqual_length=36, tx_uid=0:ffff96854d53:-362d13b0:54047c43:10, node_name=rk3983node1, branch_uid=0:ffff96854d53:-362d13b0:54047c43:1b, subordinatenodename=null, eis_name=java:jboss/datasources/XATestNode11_Informix_DS &gt;</code></pre></div></div>
+<aside class="notes"><div class="paragraph"><p>Problem of JBTM-860 discussed at <a href="https://developer.jboss.org/message/902716" class="bare">https://developer.jboss.org/message/902716</a> (log from there)</p></div></aside></section></section>
+<section id="_transaction_id"><h2>Transaction ID</h2><div class="ulist"><ul><li><p>global transaction ID (UID)</p></li><li><p>resource transaction ID (XID)</p><div class="ulist"><ul><li><p>format (int)</p></li><li><p>global transaction id <code>byte[]</code></p></li><li><p>branch qualifier <code>byte []</code></p></li></ul></div></li></ul></div>
+<aside class="notes"><div class="paragraph"><p>JTA:
+* <a href="http://docs.oracle.com/javaee/7/api/javax/transaction/Transaction.html" class="bare">http://docs.oracle.com/javaee/7/api/javax/transaction/Transaction.html</a>
+* <a href="http://docs.oracle.com/javase/7/docs/api/javax/transaction/xa/Xid.html" class="bare">http://docs.oracle.com/javase/7/docs/api/javax/transaction/xa/Xid.html</a>
+Narayana:
+* com.arjuna.ats.jta.transaction.Transaction implements javax.transaction.Transaction - it&#8217;s context, bound to thread, enlisting resources, has timeout, has synchronizations
+* com.arjuna.ats.internal.jta.transaction.arjunacore.TransactionImple implements Transaction interface
+* com.arjuna.ats.internal.jta.transaction.arjunacore.BaseTransaction parent of implementation of UserTransaction and TransactionManager
+* BaseTransaction create an TransactionImple which in constructor creates com.arjuna.ats.arjuna.AtomicAction or rather com.arjuna.ats.arjuna.coordinator.BasicAction
+  which in method BasicAction#End(boolean) manages the 2PC
+  method #End() then calls all resources which are part of the transaction and calls prepare() + commit()</p></div>
+<div class="paragraph"><p>Configuration (i.e. implemenatation to use - JTA or JTS) is done via MBeans.
+This is set in WildFly under transactions (<a href="https://github.com/wildfly/wildfly/tree/master/transactions" class="bare">https://github.com/wildfly/wildfly/tree/master/transactions</a>)</p></div>
+<div class="paragraph"><p>UID could contain serialized data - e.g. jndi of datasource or serialized connection that could be restored during recovery
+UID consists transactionNodeIdentifier (configured in transactions subsystem) to differentiate what TM will take care of recovering the transaction if something wrong happens
+  the reason why UID nees node identifier has saved is that XAResource.recover() returns <strong>all</strong> transactions in in-doubt state on the resource - it means <strong>all</strong> transactions which
+  are prepared in database - not imporatnt who creates such transaction (some DBs e.g. postgresql have one transaction log for any account and schema - everything is on one pile)
+XID consists from UID (global id of txn) + ID of resource (branch qualifier)
+branch qualifier is identificator of resource or rather resource manager of the resource - transaction manager is able to join several resources which are part of the transaction
+ (belongs to the same UID) under one branch qualifier. It&#8217;s where XAResource.isSameRM(XAResource) method plays the role. It informs if two resources belongs to one resource manager
+ and if so TM could join them under one branch qualifier</p></div></aside></section>
+<section id="_references"><h2>References</h2><div class="ulist"><ul><li><p>Last presentation <a href="https://github.com/ochaloup/ts-presentation/blob/master/slides/slides1b.adoc" class="bare">https://github.com/ochaloup/ts-presentation/blob/master/slides/slides1b.adoc</a></p></li><li><p>Mike Musgrove presentation <a href="https://developer.jboss.org/wiki/JBugcz-1501WildFly9NarayanaTransactions" class="bare">https://developer.jboss.org/wiki/JBugcz-1501WildFly9NarayanaTransactions</a></p></li><li><p>&#8230;&#8203;</p></li><li><p>Bookmarks at <a href="https://delicious.com/chalda/ts.presentation-xa" class="bare">https://delicious.com/chalda/ts.presentation-xa</a></p></li></ul></div></section>
 <section id="_"><h2>?!</h2><div class="paragraph"><p><span class="image"><img src="./images/misc/cajk.jpg" alt="cajk"></span></p></div></section></div></div><script src="reveal.js/lib/js/head.min.js"></script><script src="reveal.js/js/reveal.js"></script><script type="text/javascript">// See https://github.com/hakimel/reveal.js#configuration for a full list of configuration options
 Reveal.initialize({
   // Display controls in the bottom right corner

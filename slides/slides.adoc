@@ -47,11 +47,12 @@ and how it cope with a fail.
 
 
 == Basics
+
+// [%step]
 * Transactions
 * Transactions models
-* ACID
-* Transaction manager
-* BMT vs. CMT
+* ACID (Atomic, Consistent, Isolated, Durable)
+* Resource local vs. Global vs. Distributed
 
 [NOTE.speaker]
 --
@@ -61,12 +62,16 @@ https://github.com/ochaloup/ts-presentation/blob/master/slides/
 
 == Basics (cont.)
 
-[%step]
- * ACID (Atomic, Consistent, Isolated, Durable)
- * Resource local vs. Global vs. Distributed
- * XA is (not) Distributed transaction
- * JTA is high level API, JTS is low level API
- * Transaction manager implements JTA and JTS
+// [%step]
+* BMT vs. CMT
+* Transaction manager
+* JTA vs. JTS
+
+[NOTE.speaker]
+--
+* Transaction manager is Narayana :-o
+* JTA is high level API, JTS is low level API
+--
 
 == Narayana
 

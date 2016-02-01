@@ -47,8 +47,8 @@ of the files from `css/theme/source/`
 there is several things that a new `scss` theming file has to satisfy
 
 * include `css/theme/template/mixins.scss` like `@import "../template/mixins"`
- * include `css/theme/template/settings.scss` like `@import "../template/settings"`
- * define your own overrides under your newly created `scss` file
+* include `css/theme/template/settings.scss` like `@import "../template/settings"`
+* define your own overrides under your newly created `scss` file
 +
 (you can check `settings.scss` to see which variables are available)
  * include `css/theme/template/theme.css` like `@import "../template/theme"`

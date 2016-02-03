@@ -82,6 +82,43 @@ More resources are part of one global transaction.
 --
 * That's what transaction manager is all about
 * Two phase commit tries to solve the https://en.wikipedia.org/wiki/Two_Generals'_Problem[Two Generals Problem]. There is no full solution to this problem. 2PC is an approximation.
+* There are native "distributed" transactions for particular RDBMS: see http://stackoverflow.com/questions/21109362/how-to-process-distributed-transaction-within-postgresql (native distributed transactions)
+--
+
+== 2 phase commit
+
+```
+transactionalOperation() is a procedure at some client site
+begin() is a remote invocation to the coordinator
+    create global XID
+    return global XID
+XID is added to the thread-local context at the caller
+executeOperation(params) is a remote invocation to a participant site
+    XID is implicitly propagated to the server side thread
+    inform coordinator that this site is a participant
+    execute the operation! (acquiring locks)
+... more operations ....
+commit() is a remote invocation to the coordinator
+    XID is implicitly propagated to the server side thread
+    -------------- 2PC starts here ----------------
+    for all registered participants:
+        prepare(XID) is a remote invocation to each site
+            make sure that the transaction can be committed,
+            usually by writing and flushing a log 
+            return OK
+    gather decisions
+    for all reguistered participants:
+        commit(XID) is a remote invocation to each site
+            log transaction commit
+            (release locks)
+    -------------- 2PC ends here ----------------
+XID is removed from the thread-local context at the caller
+transaction is complete!
+```
+
+[NOTE.speaker]
+--
+Stolen from http://stackoverflow.com/questions/13425824/xa-two-phase-commit-and-execution-in-prepare-phase
 --
 
 == Narayana

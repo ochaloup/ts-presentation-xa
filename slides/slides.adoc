@@ -73,6 +73,17 @@ https://github.com/ochaloup/ts-presentation/blob/master/slides/
 * JTA is high level API, JTS is low level API
 --
 
+== XA transaction
+
+More resources are part of one global transaction.
+
+
+[NOTE.speaker]
+--
+* That's what transaction manager is all about
+* Two phase commit tries to solve the https://en.wikipedia.org/wiki/Two_Generals'_Problem[Two Generals Problem]. There is no full solution to this problem. 2PC is an approximation.
+--
+
 == Narayana
 
 image:{images}/logo/narayana-logo.png[]

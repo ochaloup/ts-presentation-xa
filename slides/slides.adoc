@@ -12,7 +12,7 @@ Ondra Chaloupka / ochaloup@redhat.com
 
 [NOTE.speaker]
 --
- What to check
+ What to check/What to talk about
  * 2PC
  * 3PC
  * Periodic  recovery
@@ -25,6 +25,27 @@ Ondra Chaloupka / ochaloup@redhat.com
  * Operation with log store and jboss cli
  * JCA multiple datasources in XA
  JCA - Using tracking=true will make it scream... Assuming you are inside a transaction... WildFly doesn't make use of IronJacamar's tracking feature by default. Further details at http://www.ironjacamar.org/doc/roadto12/txtracking.html
+
+ * What is XA (and difference to distributed txn in real)
+ * What is TM good for
+ ** global transaction management
+ ** ejb annotation (txn stuff) management
+ ** TM works all the time as 2PC manager but has some optimalizations (e.g. one-phase commit)
+ * 2PC
+ * 3PC
+ * Periodic  recovery
+ * 2PC optimalizations
+ ** presumed rollback optimalization
+ ** read-only optimalization
+ ** one-phase commit optimalization
+ ** LRCO vs. CMR
+ * Narayana log store types (filesystem, hornetq, jdbc)
+ * Operation with log store and jboss cli
+ * JCA multiple datasources in XA
+ ** JCA - Using tracking=true will make it scream... Assuming you are inside a transaction... WildFly doesn't make use of IronJacamar's tracking feature by default. Further details at http://www.ironjacamar.org/doc/roadto12/txtracking.html
+ ** what is difference to LRCO and one resource as part of global txn
+ * XA protocol is not reliable in all possible stages - see the example where it behaves quite strangely - https://bugzilla.redhat.com/show_bug.cgi?id=1181132#c16
+ ** the thing that Tom describes in comment 17 is that one resource is commited, other is rollbacked during recovery and arjuna only holds a record about this fact - meaning there is a record in object log store that heuristic rollback happened. In fact this is quite specific for CMR in comments but there is description from IBM where XA is explained: http://www-01.ibm.com/support/knowledgecenter/SSGU8G_12.1.0/com.ibm.admin.doc/ids_admin_1069.htm
 --
 
 
